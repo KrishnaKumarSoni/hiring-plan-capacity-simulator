@@ -61,6 +61,9 @@ export default function Simulator() {
     setTargetOverride(null);
     setExpandedWeek(null);
     if (raw.trim() === SAMPLE_TEXT.trim()) {
+      // Same analyzing state as a real parse: a short beat before the result.
+      setPhase("parsing");
+      await new Promise((r) => setTimeout(r, 1400));
       setBaseModel(buildSampleModel());
       setParser("sample");
       setNotes([
@@ -181,7 +184,18 @@ export default function Simulator() {
               disabled={phase === "parsing" || text.trim().length < 10}
               onClick={() => void analyzePlan(text)}
             >
-              {phase === "parsing" ? "Parsing plan…" : "Analyze hiring plan"}
+              {phase === "parsing" ? (
+                <>
+                  Analyzing plan
+                  <span className="dots" aria-hidden="true">
+                    <span>.</span>
+                    <span>.</span>
+                    <span>.</span>
+                  </span>
+                </>
+              ) : (
+                "Analyze hiring plan"
+              )}
             </button>
             <button className="btn ghost" disabled={phase === "parsing"} onClick={useSample}>
               Use sample plan
