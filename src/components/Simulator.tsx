@@ -44,7 +44,7 @@ type Phase = "input" | "parsing" | "ready";
 type ParserKind = "llm" | "heuristic" | "sample";
 
 export default function Simulator() {
-  const [text, setText] = useState("");
+  const [text, setText] = useState(SAMPLE_TEXT);
   const [phase, setPhase] = useState<Phase>("input");
   const [baseModel, setBaseModel] = useState<PlanModel | null>(null);
   const [parser, setParser] = useState<ParserKind>("sample");
@@ -64,8 +64,8 @@ export default function Simulator() {
       setBaseModel(buildSampleModel());
       setParser("sample");
       setNotes([
-        "Sample plan: parsed once into the canonical sample model (three reqs, 20-person engineering roster with overlapping pools, week-varying load, Nov–Dec PTO).",
-        "Offer acceptance 75%, stage lags, prep/feedback overhead and 15% booking waste are labeled assumptions — edit them under Review assumptions.",
+        "Sample plan: three reqs and a 20-person interviewer roster where the same senior people sit on several panels, with real week-to-week load and Nov-Dec PTO.",
+        "Offer acceptance 75%, stage timing, prep and feedback time, and 15% booking waste are labeled assumptions. Edit any of them under Review assumptions.",
       ]);
       setPhase("ready");
       setShowInput(false);
@@ -157,7 +157,7 @@ export default function Simulator() {
         <div className="brand">
           <b>candidate.fyi</b> · hiring plan capacity simulator
         </div>
-        <div className="kicker">prototype · deterministic engine</div>
+        <div className="kicker">interviewer capacity, week by week</div>
       </div>
 
       {/* ============ INPUT ============ */}
@@ -165,9 +165,9 @@ export default function Simulator() {
         <section style={{ maxWidth: 780 }}>
           <h1>Can your hiring plan fit your interviewer capacity?</h1>
           <p className="note" style={{ margin: "14px 0 22px", fontSize: 15 }}>
-            Describe the hiring plan in 2–3 lines — roles, targets, deadlines, and any known
-            interviewer or funnel assumptions. We turn it into a structured model, run a weekly
-            max-flow capacity check, and show exactly what breaks, when, and what fixes it.
+            Describe the hiring plan in a few lines: roles, targets, deadlines, and any known
+            interviewer or funnel assumptions. We turn it into a working model, check interviewer
+            capacity week by week, and show what breaks, when, and what fixes it.
           </p>
           <textarea
             className="plan-input"
@@ -193,8 +193,9 @@ export default function Simulator() {
             )}
           </div>
           <p className="mini-note" style={{ marginTop: 18 }}>
-            One LLM call structures your text. Every forecast below it is deterministic — weekly
-            interviewer supply, max-flow allocation across overlapping pools, backlog, and slip.
+            AI reads your text once, only to structure it. Every number after that comes from an
+            explicit model of interviewer availability, shared panels, and week-by-week carryover.
+            AI never writes a forecast.
           </p>
         </section>
       ) : (
@@ -287,9 +288,9 @@ function ResultBody(props: {
       {/* ============ PLAN UNDERSTOOD ============ */}
       <section className="section fade-in">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 8 }}>
-          <span className="kicker">Plan understood</span>
+          <h2 style={{ fontSize: 18 }}>Plan understood</h2>
           <span className="mini-note">
-            parser: {parser === "llm" ? "LLM structured extraction" : parser === "heuristic" ? "heuristic fallback" : "sample plan (canonical model)"}
+            {parser === "llm" ? "read by the AI parser" : parser === "heuristic" ? "read by the built-in parser" : "sample plan"}
           </span>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "10px 28px", marginTop: 14 }}>
@@ -315,7 +316,7 @@ function ResultBody(props: {
             Offer accept {pct(model.offerAccept.value)} <Chip s={model.offerAccept.source} />
           </span>
           <span>
-            Stage lags ~{model.stages[0].lagDays.value}d <Chip s={model.stages[0].lagDays.source} />
+            ~{model.stages[0].lagDays.value} days between stages <Chip s={model.stages[0].lagDays.source} />
           </span>
           <span>
             Roster · {model.interviewers.length} people <Chip s={model.rosterSource === "provided" ? "provided" : "assumed"} />
@@ -357,11 +358,11 @@ function ResultBody(props: {
             <p className={`hook ${late ? "" : "good"}`} style={{ marginTop: 22 }}>
               {late ? (
                 <>
-                  There are enough interviewer hours in total. The plan still cannot be executed —
+                  There are enough interviewer hours in total. The plan still cannot be executed:
                   the same senior people back both {bottleneckLabel} panels.
                 </>
               ) : (
-                <>Weekly allocation clears every week — the plan fits current interviewer capacity.</>
+                <>Every week clears. The plan fits current interviewer capacity.</>
               )}
             </p>
           </div>
@@ -373,7 +374,7 @@ function ResultBody(props: {
               </span>
             </div>
             <div className="check-row">
-              <span>Weekly allocation feasibility</span>
+              <span>Every week staffable</span>
               <span className={`chip ${base.summary.allocationOk ? "pass" : "fail"}`}>
                 {base.summary.allocationOk ? "pass" : "fail"}
               </span>
@@ -387,9 +388,9 @@ function ResultBody(props: {
               <span className="num">{Math.round(base.summary.totalCapacityH)}h</span>
             </div>
             <div className="check-row">
-              <span className="note">First infeasible week</span>
+              <span className="note">First week that breaks</span>
               <span className="num">
-                {base.summary.firstFailWeek === null ? "—" : `W${base.summary.firstFailWeek + 1} · ${fmtDate(weekToDate(model, base.summary.firstFailWeek))}`}
+                {base.summary.firstFailWeek === null ? "none" : `W${base.summary.firstFailWeek + 1} · ${fmtDate(weekToDate(model, base.summary.firstFailWeek))}`}
               </span>
             </div>
             <div className="check-row">
@@ -402,11 +403,11 @@ function ResultBody(props: {
 
       {/* ============ MATRIX ============ */}
       <section className="section fade-in">
-        <span className="kicker">Weekly capacity feasibility</span>
+        <h2 style={{ fontSize: 18 }}>Week-by-week capacity</h2>
         <p className="note" style={{ margin: "8px 0 16px" }}>
-          Per-pool rows use each pool&apos;s apparent capacity in isolation. The combined row runs a
-          max-flow allocation where each human is counted once — this is where overlapping pools
-          surface.
+          Each pool row checks that pool on its own. The combined row checks whether every
+          interview can actually be staffed when each person is counted only once. That is where
+          shared panels surface.
         </p>
         <div className="matrix-scroll">
           <table className="matrix">
@@ -434,7 +435,7 @@ function ResultBody(props: {
                 </tr>
               ))}
               <tr className="combined">
-                <td className="rowhead">Combined allocation</td>
+                <td className="rowhead">All panels combined</td>
                 {base.matrix.combinedOk.map((ok, w) => (
                   <td
                     key={w}
@@ -468,10 +469,10 @@ function ResultBody(props: {
                     <div key={r.pool} className="diag-pool">
                       <div className="label">{poolLabel(r.pool)}</div>
                       <div className="num" style={{ marginTop: 4, fontSize: 14 }}>
-                        demand <b>{fmtH(r.demandH)}</b>
+                        needs <b>{fmtH(r.demandH)}</b>
                       </div>
                       <div className="num" style={{ fontSize: 14 }}>
-                        apparent capacity <b>{fmtH(r.apparentCapH)}</b>{" "}
+                        has on paper <b>{fmtH(r.apparentCapH)}</b>{" "}
                         <span className={`chip ${r.ok ? "pass" : "fail"}`}>{r.ok ? "✓ looks fine" : "short"}</span>
                       </div>
                     </div>
@@ -485,7 +486,7 @@ function ResultBody(props: {
                     <b>
                       {openDiag.overlapPeople.map((p) => p.name.split(" ")[0]).join(", ").replace(/, ([^,]*)$/, " and $1")}
                     </b>{" "}
-                    belong to {openDiag.unmetPools.length > 1 ? "both pools" : "this pool"} — the same humans are being counted twice.
+                    belong to {openDiag.unmetPools.length > 1 ? "both pools" : "this pool"}. The same people are being counted twice.
                   </p>
                   <div className="overlap-people">
                     {openDiag.overlapPeople.map((p) => (
@@ -502,23 +503,23 @@ function ResultBody(props: {
 
               <div style={{ display: "flex", gap: 28, flexWrap: "wrap", margin: "18px 0 8px" }} className="num">
                 <span>
-                  Combined demand <b style={{ fontSize: 17 }}>{fmtH(openDiag.combinedDemandH)}</b>
+                  Both pools need <b style={{ fontSize: 17 }}>{fmtH(openDiag.combinedDemandH)}</b>
                 </span>
                 <span>
-                  Unique allocatable capacity <b style={{ fontSize: 17 }}>{fmtH(openDiag.uniqueCapH)}</b>
+                  Those people have <b style={{ fontSize: 17 }}>{fmtH(openDiag.uniqueCapH)}</b>
                 </span>
                 <span style={{ color: "var(--fail)" }}>
                   Shortfall <b style={{ fontSize: 17 }}>{fmtH(openDiag.shortfallH)}</b>
                 </span>
               </div>
               <p className="hook" style={{ marginTop: 12 }}>
-                Every pool looks healthy independently. Shared interviewer capacity makes the week
-                infeasible — and the unserved interviews roll forward as backlog.
+                Every pool looks healthy on its own. Shared interviewers make the week impossible,
+                and the interviews that can&apos;t be staffed roll into the next week.
               </p>
               <p className="mini-note" style={{ marginTop: 12 }}>
-                This is capacity feasibility (max-flow over eligible interviewer hours), not calendar
-                feasibility — it does not prove specific slots line up. Unserved demand carries into
-                the following week in the backlog simulation, which is what moves the completion date.
+                This checks whether enough eligible interviewer hours exist each week, not whether
+                specific calendar slots line up. Interviews that can&apos;t be staffed carry into the
+                following week, which is what moves the completion date.
               </p>
             </div>
           </div>
@@ -527,7 +528,10 @@ function ResultBody(props: {
 
       {/* ============ SENSITIVITY ============ */}
       <section className="section fade-in">
-        <span className="kicker">Sensitivity — the forecast is a function of its assumptions</span>
+        <h2 style={{ fontSize: 18 }}>How fragile is this forecast?</h2>
+        <p className="note" style={{ marginTop: 6 }}>
+          The forecast moves with its inputs. Two of them, stress-tested:
+        </p>
         <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
           {sensitivity.map((line) => (
             <div key={line.label} className="card" style={{ padding: "12px 16px" }}>
@@ -555,7 +559,7 @@ function ResultBody(props: {
 
       {/* ============ SCENARIOS ============ */}
       <section className="section fade-in">
-        <span className="kicker">What changes the outcome?</span>
+        <h2 style={{ fontSize: 18 }}>What changes the outcome?</h2>
         <div className="scen-grid" style={{ marginTop: 14 }}>
           {scenarios.map((sc) => {
             const r = scenarioResults.get(sc.id)!;
@@ -603,8 +607,7 @@ function ResultBody(props: {
             </button>
           )}
           <span className="note">
-            Changing the target recomputes demand, allocation, backlog and completion — scenarios
-            apply on top.
+            Changing the target reruns the whole model. Scenarios apply on top.
           </span>
         </div>
 
@@ -639,12 +642,11 @@ function ResultBody(props: {
 
       <footer style={{ marginTop: 60, borderTop: "1px solid var(--rule-strong)", paddingTop: 18 }}>
         <p className="mini-note">
-          Architecture: one LLM call structures messy hiring-plan input into a typed schema. Capacity
-          allocation and forecasts are deterministic — backwards funnel math, per-week interviewer
-          residuals, Edmonds-Karp max-flow over interviewer→pool eligibility, backlog propagation —
-          because hallucinated operational forecasts are worse than no forecasts. Engine unit tests
-          live in <span className="num">src/engine/tests</span>. Results are capacity feasibility,
-          not calendar-slot feasibility.
+          How it works: AI reads your text once and turns it into structured inputs. Every forecast
+          comes from an explicit model: funnel math, each interviewer&apos;s weekly availability, an
+          allocation check that counts each person only once across panels, and interviews that
+          carry over week to week. It checks whether the hours exist, not whether calendar slots
+          line up. AI never invents a number.
         </p>
       </footer>
     </>
@@ -690,11 +692,11 @@ function CompareCol(props: {
           <span className="num">{pct(peak)}</span>
         </div>
         <div className="stat-row">
-          <span className="note">Worst-week deficit</span>
+          <span className="note">Worst week short by</span>
           <span className="num">{fmtH(worstDeficit)}</span>
         </div>
         <div className="stat-row">
-          <span className="note">Infeasible weeks</span>
+          <span className="note">Weeks that break</span>
           <span className="num">{failWeeks}</span>
         </div>
       </div>
@@ -712,6 +714,12 @@ function AssumptionsEditor(props: {
 }) {
   const { model, editModel, onEditText } = props;
   const poolIds = Object.keys(model.poolLabels);
+  const shortPool = (p: string) => {
+    const l = model.poolLabels[p] ?? p;
+    if (l === "Hiring Manager") return "HM";
+    if (l === "System Design") return "Sys Design";
+    return l;
+  };
 
   return (
     <section className="section">
@@ -719,18 +727,19 @@ function AssumptionsEditor(props: {
         <summary>
           <span className="indicator" style={{ fontSize: 18 }} />
           <h2 style={{ fontSize: 18 }}>Review assumptions</h2>
-          <span className="note">— inspect and edit the structured model; everything recomputes</span>
+          <span className="note">see and edit what the model uses; everything recomputes</span>
         </summary>
 
-        <div style={{ marginTop: 18, display: "grid", gap: 26 }}>
+        <div style={{ marginTop: 20, display: "grid", gap: 30 }}>
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 8 }}>
-              <span className="kicker">Hiring plan</span>
+              <h3>Hiring plan</h3>
               <button className="btn ghost small" onClick={onEditText}>
                 Edit original text
               </button>
             </div>
-            <table className="data" style={{ marginTop: 8 }}>
+            <div style={{ overflowX: "auto", marginTop: 10 }}>
+            <table className="data">
               <thead>
                 <tr>
                   <th>Req</th>
@@ -746,166 +755,183 @@ function AssumptionsEditor(props: {
                     <td>{r.id}</td>
                     <td>{r.role}</td>
                     <td>
-                      <input
-                        type="number"
-                        min={0}
-                        value={r.targetHires}
-                        onChange={(e) =>
-                          editModel((m) => {
-                            m.reqs[i].targetHires = Math.max(0, parseInt(e.target.value || "0", 10));
-                          })
-                        }
-                      />
+                      <span className="field">
+                        <input
+                          type="number"
+                          min={0}
+                          value={r.targetHires}
+                          onChange={(e) =>
+                            editModel((m) => {
+                              m.reqs[i].targetHires = Math.max(0, parseInt(e.target.value || "0", 10));
+                            })
+                          }
+                        />
+                        <span className="suffix">hires</span>
+                      </span>
                     </td>
                     <td>
-                      <span className="num">W</span>
-                      <input
-                        type="number"
-                        min={1}
-                        max={r.deadlineWeek}
-                        value={r.startWeek + 1}
-                        onChange={(e) =>
-                          editModel((m) => {
-                            const v = parseInt(e.target.value || "1", 10) - 1;
-                            m.reqs[i].startWeek = Math.max(0, Math.min(v, m.reqs[i].deadlineWeek - 1));
-                          })
-                        }
-                      />
+                      <span className="field">
+                        <span className="suffix">week</span>
+                        <input
+                          type="number"
+                          min={1}
+                          max={r.deadlineWeek}
+                          value={r.startWeek + 1}
+                          onChange={(e) =>
+                            editModel((m) => {
+                              const v = parseInt(e.target.value || "1", 10) - 1;
+                              m.reqs[i].startWeek = Math.max(0, Math.min(v, m.reqs[i].deadlineWeek - 1));
+                            })
+                          }
+                        />
+                      </span>
                     </td>
                     <td className="num">{r.deadlineDate}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
 
           <div>
-            <span className="kicker">Funnel & offer</span>
-            <table className="data" style={{ marginTop: 8 }}>
-              <thead>
-                <tr>
-                  <th>Stage</th>
-                  <th>Pass rate</th>
-                  <th>Source</th>
-                  <th>Lag to next</th>
-                  <th>Duration</th>
-                  <th>Prep + feedback</th>
-                  <th>Panel</th>
-                </tr>
-              </thead>
-              <tbody>
-                {model.stages.map((s, i) => (
-                  <tr key={s.id}>
-                    <td>{s.name}</td>
+            <h3>Funnel and offer</h3>
+            <div style={{ overflowX: "auto", marginTop: 10 }}>
+              <table className="data">
+                <thead>
+                  <tr>
+                    <th>Stage</th>
+                    <th>Pass rate</th>
+                    <th>Source</th>
+                    <th>Days to next</th>
+                    <th>Length</th>
+                    <th>Prep + notes</th>
+                    <th>Panel</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {model.stages.map((s, i) => (
+                    <tr key={s.id}>
+                      <td>{s.name}</td>
+                      <td>
+                        <span className="field">
+                          <input
+                            type="number"
+                            min={5}
+                            max={100}
+                            value={Math.round(s.passRate.value * 100)}
+                            onChange={(e) =>
+                              editModel((m) => {
+                                m.stages[i].passRate = {
+                                  value: Math.min(1, Math.max(0.05, parseInt(e.target.value || "50", 10) / 100)),
+                                  source: "provided",
+                                };
+                              })
+                            }
+                          />
+                          <span className="suffix">%</span>
+                        </span>
+                      </td>
+                      <td>
+                        <Chip s={s.passRate.source} />
+                      </td>
+                      <td>
+                        <span className="field">
+                          <input
+                            type="number"
+                            min={0}
+                            max={30}
+                            value={s.lagDays.value}
+                            onChange={(e) =>
+                              editModel((m) => {
+                                m.stages[i].lagDays = {
+                                  value: Math.max(0, parseInt(e.target.value || "0", 10)),
+                                  source: "provided",
+                                };
+                              })
+                            }
+                          />
+                          <span className="suffix">days</span>
+                        </span>
+                      </td>
+                      <td className="num">{s.durationMin}m</td>
+                      <td className="num">
+                        {s.prepMin}m + {s.feedbackMin}m
+                      </td>
+                      <td className="num">
+                        {s.panel.map((seat) => `${seat.count} × ${shortPool(seat.pool)}`).join(", ")}
+                      </td>
+                    </tr>
+                  ))}
+                  <tr>
+                    <td>Offer accepted</td>
                     <td>
-                      <input
-                        type="number"
-                        min={5}
-                        max={100}
-                        value={Math.round(s.passRate.value * 100)}
-                        onChange={(e) =>
-                          editModel((m) => {
-                            m.stages[i].passRate = {
-                              value: Math.min(1, Math.max(0.05, parseInt(e.target.value || "50", 10) / 100)),
-                              source: "provided",
-                            };
-                          })
-                        }
-                      />{" "}
-                      %
+                      <span className="field">
+                        <input
+                          type="number"
+                          min={5}
+                          max={100}
+                          value={Math.round(model.offerAccept.value * 100)}
+                          onChange={(e) =>
+                            editModel((m) => {
+                              m.offerAccept = {
+                                value: Math.min(1, Math.max(0.05, parseInt(e.target.value || "75", 10) / 100)),
+                                source: "provided",
+                              };
+                            })
+                          }
+                        />
+                        <span className="suffix">%</span>
+                      </span>
                     </td>
                     <td>
-                      <Chip s={s.passRate.source} />
+                      <Chip s={model.offerAccept.source} />
                     </td>
-                    <td>
-                      <input
-                        type="number"
-                        min={0}
-                        max={30}
-                        value={s.lagDays.value}
-                        onChange={(e) =>
-                          editModel((m) => {
-                            m.stages[i].lagDays = {
-                              value: Math.max(0, parseInt(e.target.value || "0", 10)),
-                              source: "provided",
-                            };
-                          })
-                        }
-                      />{" "}
-                      d
-                    </td>
-                    <td className="num">{s.durationMin}m</td>
-                    <td className="num">
-                      {s.prepMin}m + {s.feedbackMin}m
-                    </td>
-                    <td className="num">
-                      {s.panel.map((seat) => `${seat.count} × ${model.poolLabels[seat.pool] ?? seat.pool}`).join(", ")}
+                    <td className="num">{model.offerLagDays.value} days</td>
+                    <td colSpan={3}>
+                      <span className="field">
+                        <span className="suffix">Booking waste</span>
+                        <input
+                          type="number"
+                          min={0}
+                          max={50}
+                          value={Math.round(model.bookingWasteRate.value * 100)}
+                          onChange={(e) =>
+                            editModel((m) => {
+                              m.bookingWasteRate = {
+                                value: Math.min(0.5, Math.max(0, parseInt(e.target.value || "0", 10) / 100)),
+                                source: "provided",
+                              };
+                            })
+                          }
+                        />
+                        <span className="suffix">%</span>
+                      </span>{" "}
+                      <Chip s={model.bookingWasteRate.source} />{" "}
+                      <span className="mini-note">covers reschedules and no-shows</span>
                     </td>
                   </tr>
-                ))}
-                <tr>
-                  <td>Offer → Accept</td>
-                  <td>
-                    <input
-                      type="number"
-                      min={5}
-                      max={100}
-                      value={Math.round(model.offerAccept.value * 100)}
-                      onChange={(e) =>
-                        editModel((m) => {
-                          m.offerAccept = {
-                            value: Math.min(1, Math.max(0.05, parseInt(e.target.value || "75", 10) / 100)),
-                            source: "provided",
-                          };
-                        })
-                      }
-                    />{" "}
-                    %
-                  </td>
-                  <td>
-                    <Chip s={model.offerAccept.source} />
-                  </td>
-                  <td className="num">{model.offerLagDays.value}d</td>
-                  <td colSpan={3} className="note">
-                    Booking waste{" "}
-                    <input
-                      type="number"
-                      min={0}
-                      max={50}
-                      value={Math.round(model.bookingWasteRate.value * 100)}
-                      onChange={(e) =>
-                        editModel((m) => {
-                          m.bookingWasteRate = {
-                            value: Math.min(0.5, Math.max(0, parseInt(e.target.value || "0", 10) / 100)),
-                            source: "provided",
-                          };
-                        })
-                      }
-                    />{" "}
-                    % <Chip s={model.bookingWasteRate.source} /> — expected extra bookings per completed
-                    interview: 1 / (1 − waste)
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <div>
-            <span className="kicker">
-              Interviewer supply{" "}
+            <h3>
+              Interviewer roster{" "}
               {model.rosterSource !== "provided" && <span className="chip assumed">generated assumption</span>}
-            </span>
-            <p className="mini-note" style={{ margin: "6px 0 8px" }}>
-              Residual capacity per week = weekly cap − existing load, zero on PTO weeks. Toggle pool
-              membership or adjust caps — the max-flow allocation recomputes.
+            </h3>
+            <p className="mini-note" style={{ margin: "6px 0 10px" }}>
+              Available time each week is a person&apos;s cap minus their existing load, and zero on
+              PTO weeks. Toggle panels or adjust caps and everything recomputes.
             </p>
-            <div style={{ maxHeight: 420, overflowY: "auto", border: "1px solid var(--rule)", borderRadius: 6 }}>
+            <div style={{ maxHeight: 420, overflow: "auto", border: "1px solid var(--rule)" }}>
               <table className="data">
                 <thead>
                   <tr>
                     <th>Name</th>
-                    <th>Pools</th>
-                    <th>Cap /wk</th>
+                    <th>Panels</th>
+                    <th>Cap per week</th>
                     <th>Existing load</th>
                     <th>PTO</th>
                   </tr>
@@ -915,7 +941,7 @@ function AssumptionsEditor(props: {
                     <tr key={iv.id}>
                       <td style={{ fontWeight: 600 }}>{iv.name}</td>
                       <td>
-                        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                        <div style={{ display: "flex", gap: 4 }}>
                           {poolIds.map((p) => (
                             <button
                               key={p}
@@ -929,33 +955,35 @@ function AssumptionsEditor(props: {
                                 })
                               }
                             >
-                              {model.poolLabels[p]}
+                              {shortPool(p)}
                             </button>
                           ))}
                         </div>
                       </td>
                       <td>
-                        <input
-                          type="number"
-                          min={0}
-                          max={20}
-                          step={0.5}
-                          value={iv.weeklyCapHours}
-                          onChange={(e) =>
-                            editModel((m) => {
-                              m.interviewers[i].weeklyCapHours = Math.max(0, parseFloat(e.target.value || "0"));
-                            })
-                          }
-                        />{" "}
-                        h
+                        <span className="field">
+                          <input
+                            type="number"
+                            min={0}
+                            max={20}
+                            step={0.5}
+                            value={iv.weeklyCapHours}
+                            onChange={(e) =>
+                              editModel((m) => {
+                                m.interviewers[i].weeklyCapHours = Math.max(0, parseFloat(e.target.value || "0"));
+                              })
+                            }
+                          />
+                          <span className="suffix">h</span>
+                        </span>
                       </td>
                       <td className="num" style={{ fontSize: 11.5, color: "var(--ink-soft)" }}>
                         {Object.entries(iv.existingLoadHours)
                           .map(([w, h]) => `W${+w + 1}:${h}h`)
-                          .join(" ") || "—"}
+                          .join(" ") || "none"}
                       </td>
                       <td className="num" style={{ fontSize: 11.5, color: "var(--ink-soft)" }}>
-                        {iv.ptoWeeks.map((w) => `W${w + 1}`).join(" ") || "—"}
+                        {iv.ptoWeeks.map((w) => `W${w + 1}`).join(" ") || "none"}
                       </td>
                     </tr>
                   ))}

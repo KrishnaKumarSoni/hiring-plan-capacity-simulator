@@ -17,7 +17,7 @@ const mono = Spline_Sans_Mono({
 export const metadata: Metadata = {
   title: "Hiring Plan Capacity Simulator",
   description:
-    "Can your hiring plan fit your interviewer capacity? Deterministic weekly max-flow feasibility, backlog and slip — from a 3-line plan description.",
+    "Can your hiring plan fit your interviewer capacity? Describe the plan in a few lines and see what breaks, when, and what fixes it.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -59,7 +59,7 @@ export function buildModelFromExtraction(
     ex.offerAcceptRate != null
       ? { value: ex.offerAcceptRate, source: "provided" as Provenance }
       : { value: 0.75, source: "assumed" as Provenance };
-  if (ex.offerAcceptRate == null) notes.push("Offer acceptance not given — assumed 75%.");
+  if (ex.offerAcceptRate == null) notes.push("Offer acceptance not given, so 75% is assumed.");
 
   const fallbackDeadline = (() => {
     const d = new Date(planStartDate + "T00:00:00Z");
@@ -70,16 +70,16 @@ export function buildModelFromExtraction(
   const reqs = ex.reqs.map((r, i) => {
     let deadline = r.deadlineDate;
     if (deadline && weekOf(planStartDate, deadline) < 2) {
-      notes.push(`Deadline ${deadline} is less than 2 weeks out — treated as 12 weeks from now.`);
+      notes.push(`Deadline ${deadline} is less than 2 weeks out, so it is treated as 12 weeks from now.`);
       deadline = null;
     }
     if (!deadline) {
       deadline = fallbackDeadline;
-      if (r.deadlineDate == null) notes.push(`No deadline for ${r.role} — assumed 12 weeks out (${deadline}).`);
+      if (r.deadlineDate == null) notes.push(`No deadline for ${r.role}, so 12 weeks out (${deadline}) is assumed.`);
     }
     return {
       id: r.label ? `Req ${i + 1} · ${r.label}` : `Req ${i + 1}`,
-      role: r.role,
+      role: r.role.replace(/\b\w/g, (c) => c.toUpperCase()),
       targetHires: r.targetHires,
       startWeek: Math.min(r.startDelayWeeks ?? 0, Math.max(0, weekOf(planStartDate, deadline) - 1)),
       deadlineWeek: weekOf(planStartDate, deadline),
@@ -91,10 +91,10 @@ export function buildModelFromExtraction(
 
   const engineerCount = ex.interviewerCount ?? 20;
   if (ex.interviewerCount == null) {
-    notes.push("Interviewer count not given — generated a 20-person engineering roster.");
+    notes.push("Interviewer count not given, so a 20-person roster was generated.");
   }
   notes.push(
-    `Interviewer roster (pools, weekly caps, existing load, PTO) is a generated assumption — edit it under Review assumptions.`
+    `The interviewer roster (panels, weekly caps, existing load, PTO) is a generated assumption. Edit it under Review assumptions.`
   );
 
   // Label the core-technical pool after the role being hired so a frontend or

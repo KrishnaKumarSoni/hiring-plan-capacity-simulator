@@ -91,9 +91,9 @@ export function generateRoster(engineerCount: number, horizonWeeks: number): Int
     return seed / 2147483648;
   };
   const first = [
-    "Priya", "Rahul", "Maya", "Arjun", "Sana", "Dev", "Noah", "Lucia", "Chen", "Omar",
-    "Tanvi", "Jake", "Ana", "Viktor", "Rosa", "Kiran", "Felix", "Grace", "Dan", "Sam",
-    "Ines", "Bilal", "Yuki", "Petra", "Ravi", "Nora", "Leo", "Asha", "Marco", "Tara",
+    "Sofia", "Lucas", "Maya", "Emma", "Yuki", "Daniel", "Noah", "Lucia", "Chen", "Omar",
+    "Anna", "Jake", "Ana", "Viktor", "Rosa", "Mia", "Felix", "Grace", "Dan", "Sam",
+    "Ines", "Marco", "Petra", "Nora", "Leo", "Elsa", "Hugo", "Iris", "Owen", "Tara",
   ];
   const roster: Interviewer[] = [];
   const n = Math.max(6, Math.min(30, engineerCount));
@@ -121,7 +121,7 @@ export function generateRoster(engineerCount: number, horizonWeeks: number): Int
   for (let i = 0; i < 3; i++) {
     roster.push({
       id: `rec${i}`,
-      name: ["Nisha Patel", "Tom Okafor", "Elena Rodrigues"][i],
+      name: ["Nora Whitfield", "Tomas Rivera", "Elena Rodrigues"][i],
       pools: ["recruiter"],
       weeklyCapHours: 8,
       existingLoadHours: {},
@@ -131,7 +131,7 @@ export function generateRoster(engineerCount: number, horizonWeeks: number): Int
   for (let i = 0; i < 3; i++) {
     roster.push({
       id: `hm${i}`,
-      name: ["Marcus Webb", "Devika Rao", "James Liu"][i],
+      name: ["Marcus Webb", "Claire Fontaine", "James Liu"][i],
       pools: ["hm"],
       weeklyCapHours: 7,
       existingLoadHours: { [2 + i * 3]: 1 },

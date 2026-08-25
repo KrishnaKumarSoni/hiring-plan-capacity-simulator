@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
   const extraction = heuristicExtract(text);
   const result = buildModelFromExtraction(extraction, now, "heuristic");
   result.notes.unshift(
-    "Parsed with the built-in heuristic parser (no ANTHROPIC_API_KEY configured) — the LLM parser handles messier phrasing."
+    "Read with the built-in quick parser. The AI parser handles messier phrasing when an API key is configured."
   );
   return NextResponse.json(result);
 }
